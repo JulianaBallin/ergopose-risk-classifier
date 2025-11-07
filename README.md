@@ -17,10 +17,10 @@ Dataset reference: [Zenodo - Postural Risk Estimation Dataset (2024)](https://ze
 
 | Name | Registration | GitHub Profile |
 |------|---------------|----------------|
-| **Juliana Ballin Lima** | 2315310011 | [GitHub Profile](https://github.com/) |
-| **Marcelo Heitor de Almeida Lira** | 2315310043 | [GitHub Profile](https://github.com/) |
-| **Lucas Maciel Gomes** | 2315310014 | [GitHub Profile](https://github.com/) |
-| **Ryan da Silva Marinho** | 2315310047 | [GitHub Profile](https://github.com/) |
+| **Juliana Ballin Lima** | 2315310011 | [GitHub Profile](https://github.com/JulianaBallin) |
+| **Marcelo Heitor de Almeida Lira** | 2315310043 | [GitHub Profile](https://github.com/Marcelo-Heitor-de-Almeida-Lira) |
+| **Lucas Maciel Gomes** | 2315310014 | [GitHub Profile](https://github.com/lucassmaciel) |
+| **Ryan da Silva Marinho** | 2315310047 | [GitHub Profile](https://github.com/RyanDaSilvaMarinho) |
 
 ---
 
