@@ -135,12 +135,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Data files
-data/raw/
-data/processed/
-*.csv
-*.xlsx
-
 # Models and weights
 models/*.pkl
 models/*.h5

@@ -1,11 +1,11 @@
 # 🧠 ErgoPose Risk Classifier  
-*A lightweight neural network-based system for ergonomic risk assessment using webcam posture data.*
+*Multi-Class Neural Network for 2D Ergonomic Posture Recognition and Risk Assessment.*
 
 ---
 
 ## 📍 Project Overview
 
-This project aims to develop a **computer vision system** that monitors human posture in real time through a **webcam**, detects **body landmarks (pose estimation)**, and computes key **angles** — neck, trunk, and shoulder. Using a **supervised machine learning model (Artificial Neural Network)**, the system classifies the **postural risk** as *low*, *medium*, or *high* during seated work.
+This project extends the original MultiPosture dataset experiment by introducing data simplification and generalization challenges — removing the Z coordinate, excluding subject identifiers, and incorporating a custom Quality Index to evaluate posture stability.
 
 The goal is to contribute to **ergonomic safety** and **occupational health**, offering a fast and accessible approach to identify poor postures that may lead to musculoskeletal disorders.
 
@@ -60,32 +60,39 @@ ergopose-risk-classifier/
 ```
 
 ---
-
 ## ⚙️ Methodology and Steps
 
-### 1. **Data Collection & Preparation**
-We use an open dataset containing annotated posture keypoints and ergonomic risk levels.  
-Preprocessing steps include:
-- Normalization and standardization of coordinates.
-- Calculation of angles (neck, trunk, shoulders) from body landmarks.
-- Label encoding for risk classification (0 = low, 1 = medium, 2 = high).
+The methodology was adapted to introduce additional experimental constraints for model robustness and to promote deeper understanding of feature relevance and generalization.
 
-### 2. **Exploratory Data Analysis (EDA)**
-- Visualization of body joint distributions and angle ranges.
-- Correlation between features and ergonomic risk.
-- Detection of outliers and class balance verification.
+### 1. **Data Collection & Preparation**
+We use the **MultiPosture Dataset** (Zenodo, 2024), containing skeletal pose keypoints extracted via MediaPipe.  
+Preprocessing steps include:
+- Removal of **Z coordinates** to simulate 2D-only analysis.
+- Removal of **subject ID** to ensure generalization across individuals.
+- **Feature engineering**: computation of neck, trunk, and shoulder angles.
+- **Quality index creation** — a stability metric based on the variation of body angles.
+- Normalization and standardization of all numerical features.
+- Label encoding for **multi-class posture classification** (e.g., TUP, TLF, TLB, etc.).
+
+### 2. **Feature Selection**
+Feature relevance is evaluated through:
+- Pearson correlation analysis;
+- `SelectKBest` and/or `Recursive Feature Elimination (RFE)`;
+- Manual validation using domain knowledge (ergonomic criteria).
+
+Irrelevant or redundant features are dropped to improve model performance and interpretability.
 
 ### 3. **Learning Task**
-Supervised classification using an **Artificial Neural Network (ANN)**.  
-The task aims to predict the ergonomic risk level from a set of calculated angles.
+A **multi-class supervised classification** task using an **Artificial Neural Network (ANN)**.  
+The ANN predicts the **upper-body posture class** based on computed features and the stability index.
 
 ### 4. **Validation Strategy**
-- **k-Fold Cross-Validation (k=5)** to ensure generalization.
-- Evaluation metrics: **Accuracy**, **Precision**, **Recall**, and **F1-Score**.
-- Comparison with baseline models (e.g., Decision Tree, SVM).
+- **5-Fold Cross-Validation** to evaluate model robustness.
+- Metrics: **Accuracy**, **Precision**, **Recall**, **F1-Score**, and **Confusion Matrix** for each class.
+- Comparison with baseline algorithms (Decision Tree, SVM).
 
 ### 5. **Model and Hyperparameter Grid Search**
-The following hyperparameters were tuned:
+Tuning parameters include:
 - Hidden layers: [1, 2, 3]
 - Neurons per layer: [8, 16, 32, 64]
 - Activation functions: [ReLU, Tanh]
@@ -94,53 +101,122 @@ The following hyperparameters were tuned:
 - Batch sizes: [8, 16, 32]
 
 ### 6. **Training and Testing**
-Training and evaluation were carried out using **TensorFlow/Keras**.  
-Training curves, loss evolution, and confusion matrices are included in the notebooks.
+Training and evaluation conducted with **TensorFlow/Keras**.  
+Notebooks include:
+- Learning curves and loss analysis.
+- Comparison between original 3D vs 2D (no Z) models.
+- Evaluation of feature selection impact.
 
 ### 7. **Results and Analysis**
-- Visual comparison of prediction accuracy across models.
-- Discussion of misclassification cases.
-- Proposal for real-time inference using **OpenCV + MediaPipe** integration.
+- Accuracy comparison with and without feature selection.
+- Influence of the stability index on classification.
+- Error analysis and confusion matrices.
+- Insights on how the ANN generalizes across participants.
+- Evaluation of class-wise precision and recall, identifying which postures are most difficult to classify.
+- Analysis of the impact of removing the Z coordinate on spatial feature learning.
+
+---
+## 🧠 Machine Learning Pipeline – Ergonomic Posture Classifier
+
+──────────────────────────────────────────────────────────────
+📥 DATA COLLECTION
+──────────────────────────────────────────────────────────────
+• Dataset: MultiPosture (Zenodo, 2024)
+• 13 participants — 4,800 frames — 11 joints (x, y, z)
+• Labels: upper and lower body posture classes
+
+
+──────────────────────────────────────────────────────────────
+🧹 DATA PREPARATION & CLEANING
+──────────────────────────────────────────────────────────────
+• Remove Z coordinates → 2D-only input  
+• Remove subject ID → ensure model generalization  
+• Normalize and standardize coordinates  
+• Compute body angles (neck, trunk, shoulder)  
+• Create "Quality Index" → stability metric based on angle variation  
+
+
+──────────────────────────────────────────────────────────────
+🔍 FEATURE SELECTION
+──────────────────────────────────────────────────────────────
+• Pearson correlation analysis  
+• SelectKBest or Recursive Feature Elimination (RFE)  
+• Manual validation using ergonomic domain knowledge  
+
+
+──────────────────────────────────────────────────────────────
+🧠 MODEL TRAINING
+──────────────────────────────────────────────────────────────
+• Artificial Neural Network (ANN) for multi-class classification  
+• Input: selected features + quality index  
+• Output: posture classes (TUP, TLF, TLB, etc.)  
+• Framework: TensorFlow / Keras  
+
+     
+──────────────────────────────────────────────────────────────
+🧪 CROSS-VALIDATION
+──────────────────────────────────────────────────────────────
+• 5-Fold cross-validation  
+• Metrics: Accuracy, Precision, Recall, F1-Score  
+• Baseline comparison: SVM, Decision Tree  
+
+
+──────────────────────────────────────────────────────────────
+📊 RESULTS ANALYSIS
+──────────────────────────────────────────────────────────────
+• Compare performance with / without feature selection  
+• Confusion matrix and misclassification analysis  
+• Evaluate 2D (no Z) vs 3D models  
+• Visualize loss and accuracy curves  
+
+
+──────────────────────────────────────────────────────────────
+🤖 REAL-TIME INFERENCE (DEMO)
+──────────────────────────────────────────────────────────────
+• Integration with OpenCV + MediaPipe  
+• Webcam-based posture risk classification  
+• Real-time ergonomic feedback: Low / Medium / High  
+──────────────────────────────────────────────────────────────
 
 ---
 
+
+
 ## 📊 Expected Outputs
-- Trained ANN model and performance metrics.  
-- Visualization of key performance indicators (loss, accuracy, confusion matrix).  
-- Real-time webcam demonstration classifying posture risk levels.
+- Trained ANN for multi-class posture classification.
+- Comparative performance metrics (2D vs 3D, with/without feature selection).
+- Visualizations: learning curves, confusion matrices, and feature importance plots.
+- Real-time webcam demo classifying posture classes.
 
 ---
 
 ## 🧩 Tools and Technologies
 | Category | Tools |
 |-----------|--------|
-| Programming Language | Python 3.11 |
-| Machine Learning | TensorFlow / Keras, Scikit-learn |
+| Language | Python 3.11 |
+| ML Frameworks | TensorFlow, Scikit-learn |
 | Data Processing | NumPy, Pandas |
 | Visualization | Matplotlib, Seaborn |
-| Computer Vision | OpenCV, MediaPipe |
+| Computer Vision | MediaPipe, OpenCV |
 | Development | Jupyter Notebook, GitHub |
-| Dataset | [Zenodo Postural Risk Dataset (2024)](https://zenodo.org/records/14230872) |
+| Dataset | [Zenodo MultiPosture Dataset (2024)](https://zenodo.org/records/14230872) |
 
 ---
 
 ## 🎯 Expected Learning Outcomes
-- Understanding of the **supervised learning pipeline**.
-- Application of **Artificial Neural Networks** for ergonomic risk classification.
-- Integration of **pose estimation** with machine learning.
-- Development of research, collaboration, and documentation skills.
-
----
-
-## 🧾 License
-This project is licensed under the [MIT License](LICENSE).
+- Apply **feature engineering and selection** in supervised learning.
+- Understand the trade-offs of **data simplification (Z removal)**.
+- Build and evaluate **multi-class neural networks**.
+- Develop critical thinking about model generalization and data bias.
+- Integrate ergonomic domain knowledge into ML workflows.
 
 ---
 
 ## 🧑‍🏫 Academic Context
-This repository was developed as the **Final Evaluative Activity (AA3)** for the course *Machine Learning* (Universidade do Estado do Amazonas, 2025).  
-It includes all required stages: data preparation, exploratory analysis, task definition, cross-validation, hyperparameter search, model training, performance analysis, and presentation slides.
+Developed as the **Final Project (AA3)** for the course *Neural Networks and Deep Learning* — Universidade do Estado do Amazonas (2025).  
+Includes all required stages: preprocessing, feature selection, model training, evaluation, and presentation.
 
 ---
 
 *“Artificial Intelligence supporting healthy workplaces — one posture at a time.”*
+
