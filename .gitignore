@@ -134,6 +134,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+rn
+rn/
 
 # Models and weights
 models/*.pkl
