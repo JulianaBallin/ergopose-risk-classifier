@@ -6,7 +6,7 @@ seaborn==0.13.2
 
 # Machine Learning
 scikit-learn==1.5.2
-torch --extra-index-url https://download.pytorch.org/whl/c118
+torch --extra-index-url https://download.pytorch.org/whl/cu118
 
 # Computer Vision & Pose Estimation
 opencv-python==4.10.0.84
