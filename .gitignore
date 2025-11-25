@@ -168,3 +168,7 @@ mlruns/
 # OS generated files
 ehthumbs.db
 Icon?
+
+# Neural Network Models files
+*.pth
+*.json
