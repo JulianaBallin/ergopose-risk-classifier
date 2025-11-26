@@ -1,4 +1,4 @@
-# 🧠 ErgoPose Risk Classifier  
+# ErgoPose Risk Classifier  
 *Multi-Class Neural Network for 2D Ergonomic Posture Recognition and Risk Assessment.*
 
 ---
@@ -39,7 +39,8 @@ ergopose-risk-classifier/
 │ ├── 01_data_preparation.ipynb
 │ ├── 02_exploratory_analysis.ipynb
 │ ├── 03_model_training.ipynb
-│ └── 04_results_analysis.ipynb
+│ └── 04_fine_tune_models.ipynb
+│ └── 05_results_analysis.ipynb
 │
 ├── models/
 │ ├── neural_network.pkl # Trained model
@@ -91,14 +92,15 @@ The ANN predicts the **upper-body posture class** based on computed features and
 - Metrics: **Accuracy**, **Precision**, **Recall**, **F1-Score**, and **Confusion Matrix** for each class.
 - Comparison with baseline algorithms (Decision Tree, SVM).
 
-### 5. **Model and Hyperparameter Grid Search**
-Tuning parameters include:
-- Hidden layers: [1, 2, 3]
-- Neurons per layer: [8, 16, 32, 64]
-- Activation functions: [ReLU, Tanh]
-- Optimizers: [Adam, SGD]
-- Learning rates: [0.001, 0.01, 0.1]
-- Batch sizes: [8, 16, 32]
+### 5. **Model Architecture and Hyperparameter Tuning**
+In compliance with the project constraints, we will explore architectures where:
+- **Total hidden neurons**: Between 5 and 20.
+- **Hidden layers**: If more than one layer, the sum of their neurons must be between 5 and 20.
+- **Activation functions**: ReLU, Sigmoid, etc. (excluding Tanh).
+- **Learning rates**: 0.01, 0.001, or smaller.
+- **Batch size**: Default Keras value (32).
+
+Our search will focus on finding the optimal combination within these boundaries to maximize performance on the training set.
 
 ### 6. **Training and Testing**
 Training and evaluation conducted with **TensorFlow/Keras**.  
@@ -118,17 +120,17 @@ Notebooks include:
 ---
 ## 🧠 Machine Learning Pipeline – Ergonomic Posture Classifier
 
-──────────────────────────────────────────────────────────────
-📥 DATA COLLECTION
-──────────────────────────────────────────────────────────────
-• Dataset: MultiPosture (Zenodo, 2024)
-• 13 participants — 4,800 frames — 11 joints (x, y, z)
-• Labels: upper and lower body posture classes
+──────────────────────────────────────────────────────────────  
+**DATA COLLECTION**
+──────────────────────────────────────────────────────────────  
+• Dataset: MultiPosture (Zenodo, 2024)  
+• 13 participants — 4,800 frames — 11 joints (x, y, z)  
+• Labels: upper and lower body posture classes  
 
 
-──────────────────────────────────────────────────────────────
-🧹 DATA PREPARATION & CLEANING
-──────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────  
+**DATA PREPARATION & CLEANING**
+──────────────────────────────────────────────────────────────  
 • Remove Z coordinates → 2D-only input  
 • Remove subject ID → ensure model generalization  
 • Normalize and standardize coordinates  
@@ -136,54 +138,45 @@ Notebooks include:
 • Create "Quality Index" → stability metric based on angle variation  
 
 
-──────────────────────────────────────────────────────────────
-🔍 FEATURE SELECTION
-──────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────  
+**FEATURE SELECTION**
+──────────────────────────────────────────────────────────────  
 • Pearson correlation analysis  
 • SelectKBest or Recursive Feature Elimination (RFE)  
 • Manual validation using ergonomic domain knowledge  
 
 
-──────────────────────────────────────────────────────────────
-🧠 MODEL TRAINING
-──────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────  
+**MODEL TRAINING**
+──────────────────────────────────────────────────────────────  
 • Artificial Neural Network (ANN) for multi-class classification  
 • Input: selected features + quality index  
 • Output: posture classes (TUP, TLF, TLB, etc.)  
 • Framework: TensorFlow / Keras  
 
      
-──────────────────────────────────────────────────────────────
-🧪 CROSS-VALIDATION
-──────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────  
+**CROSS-VALIDATION**
+──────────────────────────────────────────────────────────────  
 • 5-Fold cross-validation  
 • Metrics: Accuracy, Precision, Recall, F1-Score  
 • Baseline comparison: SVM, Decision Tree  
 
 
-──────────────────────────────────────────────────────────────
-📊 RESULTS ANALYSIS
-──────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────  
+**RESULTS ANALYSIS**
+──────────────────────────────────────────────────────────────  
 • Compare performance with / without feature selection  
 • Confusion matrix and misclassification analysis  
 • Evaluate 2D (no Z) vs 3D models  
 • Visualize loss and accuracy curves  
 
-
-──────────────────────────────────────────────────────────────
-🤖 REAL-TIME INFERENCE (DEMO)
-──────────────────────────────────────────────────────────────
-• Integration with OpenCV + MediaPipe  
-• Webcam-based posture risk classification  
-• Real-time ergonomic feedback: Low / Medium / High  
-──────────────────────────────────────────────────────────────
-
----
-
-
+──────────────────────────────────────────────────────────────  
 
 ## 📊 Expected Outputs
-- Trained ANN for multi-class posture classification.
+- **Trained ANN models** for multi-class posture classification (saved as `.h5` or `.pkl`).
+- **Training history logs** for all model variants.
+- **Comparative performance histograms** generated from the history, providing a final overview of model accuracy.
 - Comparative performance metrics (2D vs 3D, with/without feature selection).
 - Visualizations: learning curves, confusion matrices, and feature importance plots.
 - Real-time webcam demo classifying posture classes.
