@@ -1,0 +1,633 @@
+{
+  "cells": [
+    {
+      "cell_type": "code",
+      "source": [
+        "import sys\n",
+        "\n",
+        "print(\"📦 Instalando dependências...\")\n",
+        "\n",
+        "!pip install torch torchvision torchaudio --quiet\n",
+        "\n",
+        "!pip install numpy pandas scikit-learn joblib matplotlib seaborn --quiet\n",
+        "!pip install ipykernel --quiet\n",
+        "\n",
+        "import torch\n",
+        "import sklearn\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "\n",
+        "print(\"\\n✅ Instalação concluída!\")\n",
+        "print(f\"PyTorch version: {torch.__version__}\")\n",
+        "print(f\"Scikit-learn version: {sklearn.__version__}\")\n",
+        "print(f\"Pandas version: {pd.__version__}\")\n",
+        "print(f\"Numpy version: {np.__version__}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Ie5zoCyL4Ens",
+        "outputId": "5a960bf7-a6fa-442b-8fcd-405ab4bfd152"
+      },
+      "id": "Ie5zoCyL4Ens",
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "📦 Instalando dependências...\n",
+            "\n",
+            "✅ Instalação concluída!\n",
+            "PyTorch version: 2.9.0+cu126\n",
+            "Scikit-learn version: 1.6.1\n",
+            "Pandas version: 2.2.2\n",
+            "Numpy version: 2.0.2\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "qJof18Ky4qqW",
+        "outputId": "662ca63c-175c-4b73-c8da-691a45b7c2c1"
+      },
+      "id": "qJof18Ky4qqW",
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/drive\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Implementação Seed"
+      ],
+      "metadata": {
+        "id": "d4Fc5Fzb7ier"
+      },
+      "id": "d4Fc5Fzb7ier"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "yO7u_Yh62hyJ"
+      },
+      "source": [
+        "# === Reprodutibilidade e checkpointing ===\n",
+        "import os, time, hashlib, json, csv, random\n",
+        "from pathlib import Path\n",
+        "import joblib\n",
+        "import numpy as np\n",
+        "import torch\n",
+        "\n",
+        "def set_seed(seed:int):\n",
+        "    random.seed(seed)\n",
+        "    np.random.seed(seed)\n",
+        "    torch.manual_seed(seed)\n",
+        "    torch.cuda.manual_seed_all(seed)\n",
+        "    torch.backends.cudnn.deterministic=True\n",
+        "    torch.backends.cudnn.benchmark=False\n",
+        "    print(f\"[seed] {seed}\")\n",
+        "\n",
+        "def file_sha256(path:str, block_size=65536):\n",
+        "    h=hashlib.sha256()\n",
+        "    with open(path,'rb') as f:\n",
+        "        for blk in iter(lambda: f.read(block_size), b''):\n",
+        "            h.update(blk)\n",
+        "    return h.hexdigest()\n",
+        "\n",
+        "def save_checkpoint(model, optimizer, epoch, seed, metrics, path, extra=None):\n",
+        "    path=Path(path)\n",
+        "    path.parent.mkdir(parents=True, exist_ok=True)\n",
+        "    ckpt={\n",
+        "      'model_state_dict': model.state_dict(),\n",
+        "      'optimizer_state_dict': optimizer.state_dict() if optimizer else None,\n",
+        "      'epoch': epoch,\n",
+        "      'seed': seed,\n",
+        "      'metrics': metrics,\n",
+        "      'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')\n",
+        "    }\n",
+        "    if extra: ckpt['extra']=extra\n",
+        "    torch.save(ckpt, str(path))\n",
+        "    print('[checkpoint salvo]', path)\n",
+        "\n",
+        "def save_artifacts(scaler, encoder, prefix):\n",
+        "    Path(prefix).parent.mkdir(parents=True, exist_ok=True)\n",
+        "    joblib.dump(scaler, f\"{prefix}_scaler.joblib\")\n",
+        "    joblib.dump(encoder, f\"{prefix}_labelencoder.joblib\")\n",
+        "    print('[artifacts salvos]', prefix)\n",
+        "\n",
+        "def append_experiment_log(csv_path, row:dict):\n",
+        "    csv_path=Path(csv_path)\n",
+        "    exists=csv_path.exists()\n",
+        "    with open(csv_path,'a',newline='') as f:\n",
+        "        w=csv.DictWriter(f, fieldnames=list(row.keys()))\n",
+        "        if not exists: w.writeheader()\n",
+        "        w.writerow(row)\n",
+        "    print('[log registrado]', csv_path)\n"
+      ],
+      "execution_count": 3,
+      "outputs": [],
+      "id": "yO7u_Yh62hyJ"
+    },
+    {
+      "cell_type": "markdown",
+      "id": "50f578e6",
+      "metadata": {
+        "id": "50f578e6"
+      },
+      "source": [
+        "# ErgoPose Risk Classifier — Model Training\n",
+        "\n",
+        "This notebook is the **third stage** of the *ErgoPose Risk Classifier* project.  \n",
+        "It defines, trains, and evaluates the **Artificial Neural Network (ANN)** for posture classification based on the preprocessed dataset.\n",
+        "\n",
+        "### Objectives\n",
+        "- Load the cleaned dataset from `data/processed/`.\n",
+        "- Encode categorical posture labels.\n",
+        "- Split the data into training and testing sets.\n",
+        "- Define and train an ANN model for multi-class classification.\n",
+        "- Save the trained model and scaler to the `models/` directory.\n",
+        "\n",
+        "### Input and Output\n",
+        "- **Input:** `data/processed/clean_postural_risk_dataset.csv`  \n",
+        "- **Outputs:**  \n",
+        "  - `models/neural_network.pkl`  \n",
+        "  - `models/scaler.pkl`"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "id": "254af19b",
+      "metadata": {
+        "id": "254af19b"
+      },
+      "outputs": [],
+      "source": [
+        "\"\"\"\n",
+        "Imports the necessary libraries for model definition, training, and evaluation.\n",
+        "\"\"\"\n",
+        "\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "from pathlib import Path\n",
+        "from sklearn.model_selection import train_test_split, KFold\n",
+        "from sklearn.preprocessing import LabelEncoder, StandardScaler\n",
+        "from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score\n",
+        "import joblib\n",
+        "import json\n",
+        "from math import sqrt\n",
+        "\n",
+        "import torch\n",
+        "from torch import Tensor, nn, optim"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 5,
+      "id": "b0c3ff4d",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "b0c3ff4d",
+        "outputId": "a279d917-e153-4c08-ab22-b80b5556b095"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Dataset path: /content/drive/MyDrive/clean_postural_risk_dataset.csv\n",
+            "Models directory: ../models\n"
+          ]
+        }
+      ],
+      "source": [
+        "\"\"\"\n",
+        "Defines paths for processed data and model output directories.\n",
+        "\"\"\"\n",
+        "\n",
+        "DATA_PATH = Path(\"/content/drive/MyDrive/clean_postural_risk_dataset.csv\")\n",
+        "MODELS_PATH = Path(\"../models\")\n",
+        "MODELS_PATH.mkdir(exist_ok=True)\n",
+        "\n",
+        "print(f\"Dataset path: {DATA_PATH}\")\n",
+        "print(f\"Models directory: {MODELS_PATH}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 6,
+      "id": "9120d48f-df85-4f4c-945f-44221c61cceb",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "9120d48f-df85-4f4c-945f-44221c61cceb",
+        "outputId": "fb6ecf0e-315f-481f-a5a9-e6c1ee2b52eb"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "The number of neurons in hidden layers will be: 5 <= N <= 20\n"
+          ]
+        }
+      ],
+      "source": [
+        "\"\"\"\n",
+        "Defines the number of neurons in the hidden layers by the 'Geometric Pyramid Rule'\n",
+        "\"\"\"\n",
+        "\n",
+        "data = pd.read_csv(DATA_PATH)\n",
+        "\n",
+        "X = data.drop(columns=['upperbody_label'])\n",
+        "y = data['upperbody_label']\n",
+        "\n",
+        "input_neurons = X.shape[1]\n",
+        "output_neurons = 2 # Binary classification\n",
+        "\n",
+        "input_output_neurons = int(sqrt(input_neurons*output_neurons))\n",
+        "\n",
+        "print(f\"The number of neurons in hidden layers will be: {int(input_output_neurons*0.5)} <= N <= {int(input_output_neurons*2)}\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "id": "b4eb347a-a787-4833-b766-ef3d9eaef315",
+      "metadata": {
+        "id": "b4eb347a-a787-4833-b766-ef3d9eaef315"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "markdown",
+      "id": "e5b6f882-fda7-4ba3-a7df-af74a9cd1637",
+      "metadata": {
+        "id": "e5b6f882-fda7-4ba3-a7df-af74a9cd1637"
+      },
+      "source": [
+        "## Model Architecture Proposals - rules\n",
+        "- Hidden layers must have beetwen **5 and 20 neurons total**. If more than 1 hidden layer is implemented, the number of neurons of both layers must **add up** to a number beetwen **5 and 20**.\n",
+        "- Batch size, at this initial stage, must be **default**.\n",
+        "- Activation function **cannot** be tanh.\n",
+        "- Learning rate must be $10^{-2}, 10^{-3}$ or **smaller numbers**."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 7,
+      "id": "693231ba-ca95-46e4-9f12-34b2defaa9fe",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "693231ba-ca95-46e4-9f12-34b2defaa9fe",
+        "outputId": "66773e64-2d2e-4c5a-c168-76c663aae4ac"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Usando dispositivo: cuda\n"
+          ]
+        }
+      ],
+      "source": [
+        "device = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\n",
+        "print(f\"Usando dispositivo: {device}\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 8,
+      "id": "89a8b7b2-69d9-47b6-94e0-d7b4bcb3fc08",
+      "metadata": {
+        "id": "89a8b7b2-69d9-47b6-94e0-d7b4bcb3fc08"
+      },
+      "outputs": [],
+      "source": [
+        "def run_model(input_dim, hidden_dim_1, hidden_dim_2, output_dim, kf, best_acc, best_model):\n",
+        "    acc_scores = []\n",
+        "    f1_scores = []\n",
+        "    precision_scores = []\n",
+        "    recall_scores = []\n",
+        "\n",
+        "    X_t: Tensor = torch.tensor(X.values, dtype=torch.float32).to(device)\n",
+        "\n",
+        "    le = LabelEncoder()\n",
+        "    y_enc = le.fit_transform(y)\n",
+        "    y_enc = torch.tensor(y_enc, dtype=torch.float32)\n",
+        "\n",
+        "    for fold, (train_index, val_index) in enumerate(kf.split(X_t)):\n",
+        "        X_train_t, X_val_t = X_t[train_index].to(device), X_t[val_index].to(device)\n",
+        "        y_train_t, y_val_t = y_enc[train_index].to(device), y_enc[val_index].to(device)\n",
+        "\n",
+        "        model: MLPModel = MLPModel(input_dim, hidden_dim_1, hidden_dim_2, output_dim).to(device)\n",
+        "        criterion = nn.BCEWithLogitsLoss()\n",
+        "        optimizer = optim.Adam(model.parameters(), lr=0.001)\n",
+        "\n",
+        "        for epoch in range(300):\n",
+        "            model.train()\n",
+        "            optimizer.zero_grad()\n",
+        "            outputs = model(X_train_t).squeeze()\n",
+        "            loss = criterion(outputs, y_train_t)\n",
+        "            loss.backward()\n",
+        "            optimizer.step()\n",
+        "            # print(f\"Epoch {epoch}: loss {loss}\")\n",
+        "        model.eval()\n",
+        "        with torch.no_grad():\n",
+        "            val_outputs = model(X_val_t).squeeze()\n",
+        "            y_pred_t = (torch.sigmoid(val_outputs) > 0.5).long()\n",
+        "            y_pred = y_pred_t.cpu().numpy()\n",
+        "            y_true = y_val_t.cpu().numpy()\n",
+        "\n",
+        "        acc = accuracy_score(y_true, y_pred)\n",
+        "        prec = precision_score(y_true, y_pred)\n",
+        "        rec = recall_score(y_true, y_pred)\n",
+        "        f1 = f1_score(y_true, y_pred)\n",
+        "\n",
+        "        if acc > best_acc:\n",
+        "            best_acc = acc\n",
+        "            best_model = model\n",
+        "\n",
+        "            print(f\"New best model found (Acc {best_acc:.4f})\")\n",
+        "\n",
+        "        acc_scores.append(acc)\n",
+        "        precision_scores.append(prec)\n",
+        "        recall_scores.append(rec)\n",
+        "        f1_scores.append(f1)\n",
+        "\n",
+        "    results = {\n",
+        "        \"acc\": np.mean(acc_scores),\n",
+        "        \"precision\": np.mean(precision_scores),\n",
+        "        \"recall\": np.mean(recall_scores),\n",
+        "        \"f1\": np.mean(f1_scores)\n",
+        "    }\n",
+        "\n",
+        "    return results, best_model, best_acc"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 9,
+      "id": "4366e775-3b23-486e-a82f-236976142efc",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "4366e775-3b23-486e-a82f-236976142efc",
+        "outputId": "fbd8b549-abf3-4d70-e4e2-c77572629a75"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "New best model found (Acc 0.7716)\n",
+            "New best model found (Acc 0.8154)\n",
+            "Métricas da execução 0--------------------------\n",
+            "\n",
+            "    Acc: 0.7838956724667527\n",
+            "    Precision: 0.6820849088187797\n",
+            "    Recall: 0.6743230862915017\n",
+            "    F1: 0.6768399934038615\n",
+            "    \n",
+            "Métricas da execução 1--------------------------\n",
+            "\n",
+            "    Acc: 0.7811890865789651\n",
+            "    Precision: 0.6940122453195913\n",
+            "    Recall: 0.6275854546138209\n",
+            "    F1: 0.657680342973606\n",
+            "    \n",
+            "Métricas da execução 2--------------------------\n",
+            "\n",
+            "    Acc: 0.7861849395138029\n",
+            "    Precision: 0.6960407051739278\n",
+            "    Recall: 0.6519711859546332\n",
+            "    F1: 0.6727843220984994\n",
+            "    \n",
+            "Métricas da execução 3--------------------------\n",
+            "\n",
+            "    Acc: 0.7845215418810043\n",
+            "    Precision: 0.6978344221493232\n",
+            "    Recall: 0.6371401736449205\n",
+            "    F1: 0.6656704212078378\n",
+            "    \n",
+            "Métricas da execução 4--------------------------\n",
+            "\n",
+            "    Acc: 0.8007945820389628\n",
+            "    Precision: 0.7026495853680417\n",
+            "    Recall: 0.7097454835512089\n",
+            "    F1: 0.7052942460392806\n",
+            "    \n",
+            "New best model found (Acc 0.8165)\n",
+            "Métricas da execução 5--------------------------\n",
+            "\n",
+            "    Acc: 0.7851461051330001\n",
+            "    Precision: 0.6796752020533253\n",
+            "    Recall: 0.6879029616410467\n",
+            "    F1: 0.6829514830025777\n",
+            "    \n",
+            "Métricas da execução 6--------------------------\n",
+            "\n",
+            "    Acc: 0.7797248786901805\n",
+            "    Precision: 0.686924560631843\n",
+            "    Recall: 0.6377892109972818\n",
+            "    F1: 0.6590733515277083\n",
+            "    \n",
+            "Métricas da execução 7--------------------------\n",
+            "\n",
+            "    Acc: 0.772010902100962\n",
+            "    Precision: 0.66671798696656\n",
+            "    Recall: 0.65053392263008\n",
+            "    F1: 0.6569557491017519\n",
+            "    \n",
+            "Métricas da execução 8--------------------------\n",
+            "\n",
+            "    Acc: 0.7830632117223708\n",
+            "    Precision: 0.6851733608149726\n",
+            "    Recall: 0.6598118702420276\n",
+            "    F1: 0.6716169397188033\n",
+            "    \n",
+            "Métricas da execução 9--------------------------\n",
+            "\n",
+            "    Acc: 0.7901541489155587\n",
+            "    Precision: 0.6913181466764853\n",
+            "    Recall: 0.6751428515608628\n",
+            "    F1: 0.6830266157344965\n",
+            "    \n",
+            "Acurácia: 0.7847\n",
+            "Precisão: 0.6882\n",
+            "Revocação: 0.6612\n",
+            "F1: 0.6732\n",
+            "Best model Accuracy: 0.8165\n"
+          ]
+        }
+      ],
+      "source": [
+        "class MLPModel(nn.Module):\n",
+        "    def __init__(self, input_dim, hidden_dim_1, hidden_dim_2, output_dim):\n",
+        "        super(MLPModel, self).__init__()\n",
+        "        self.net = nn.Sequential(\n",
+        "            nn.Linear(input_dim, hidden_dim_1),\n",
+        "            nn.ReLU(),\n",
+        "            nn.Linear(hidden_dim_1, hidden_dim_2),\n",
+        "            nn.ReLU(),\n",
+        "            nn.Linear(hidden_dim_2, output_dim),\n",
+        "        )\n",
+        "\n",
+        "    def forward(self, x):\n",
+        "        return self.net(x)\n",
+        "\n",
+        "number_tests = 10\n",
+        "metrics = []\n",
+        "best_acc = 0.0\n",
+        "best_model = None\n",
+        "\n",
+        "for test in range(number_tests):\n",
+        "    seed = 42 + test\n",
+        "\n",
+        "    num_splits = 5\n",
+        "    kf = KFold(\n",
+        "        n_splits=num_splits,\n",
+        "        shuffle=True,\n",
+        "        random_state=seed\n",
+        "    )\n",
+        "\n",
+        "    # Hyperparameters\n",
+        "    input_dim: int = X.shape[1]\n",
+        "    hidden_dim_1 = 8\n",
+        "    hidden_dim_2 = 10\n",
+        "    output_dim = 1\n",
+        "\n",
+        "    results, new_best_model, new_best_acc = run_model(input_dim, hidden_dim_1, hidden_dim_2, output_dim, kf, best_acc, best_model)\n",
+        "\n",
+        "    best_acc = new_best_acc\n",
+        "    best_model = new_best_model\n",
+        "\n",
+        "    metrics.append(results)\n",
+        "\n",
+        "    print(f\"Métricas da execução {test}--------------------------\")\n",
+        "    print(f\"\"\"\n",
+        "    Acc: {results['acc']}\n",
+        "    Precision: {results['precision']}\n",
+        "    Recall: {results['recall']}\n",
+        "    F1: {results['f1']}\n",
+        "    \"\"\")\n",
+        "\n",
+        "final_metrics = {\n",
+        "    \"Acc\": np.mean([m[\"acc\"] for m in metrics]),\n",
+        "    \"Precision\": np.mean([m[\"precision\"] for m in metrics]),\n",
+        "    \"Recall\": np.mean([m[\"recall\"] for m in metrics]),\n",
+        "    \"F1\": np.mean([m[\"f1\"] for m in metrics]),\n",
+        "}\n",
+        "\n",
+        "print(f\"Acurácia: {final_metrics['Acc']:.4f}\")\n",
+        "print(f\"Precisão: {final_metrics['Precision']:.4f}\")\n",
+        "print(f\"Revocação: {final_metrics['Recall']:.4f}\")\n",
+        "print(f\"F1: {final_metrics['F1']:.4f}\")\n",
+        "\n",
+        "print(f\"Best model Accuracy: {best_acc:.4f}\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 10,
+      "id": "b4ca2bb6-db31-48f1-a23a-75663f14c101",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "b4ca2bb6-db31-48f1-a23a-75663f14c101",
+        "outputId": "9d1e9a96-3165-4909-e14a-5d340d34bf5f"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Modelo salvo em ../models/modelo_0.78_8-10.pth.\n",
+            "Detalhes salvos em ../models/modelo_0.78_8-10.json\n"
+          ]
+        }
+      ],
+      "source": [
+        "model_path = f\"{MODELS_PATH}/modelo_{round(final_metrics['Acc'], 2)}_{hidden_dim_1}-{hidden_dim_2}.pth\"\n",
+        "model_details_path = f\"{MODELS_PATH}/modelo_{round(final_metrics['Acc'], 2)}_{hidden_dim_1}-{hidden_dim_2}.json\"\n",
+        "\n",
+        "model = best_model\n",
+        "\n",
+        "torch.save(model, model_path)\n",
+        "\n",
+        "model_details = {\n",
+        "    \"optimizer\": \"Adam\",\n",
+        "    \"funcao_ativacao\": \"ReLU\",\n",
+        "    \"num_epochs\": 300,\n",
+        "    \"hidden_layer_1\": hidden_dim_1,\n",
+        "    \"hidden_layer_2\": hidden_dim_2,\n",
+        "    \"learning_rate\": 0.0001,\n",
+        "    \"acc\": round(final_metrics['Acc'], 2),\n",
+        "    \"precision\": round(final_metrics['Precision'], 2),\n",
+        "    \"recall\": round(final_metrics['Recall'], 2),\n",
+        "    \"f1\": round(final_metrics['F1'], 2)\n",
+        "}\n",
+        "\n",
+        "with open(model_details_path, 'w') as f:\n",
+        "    json.dump(model_details, f, indent=4)\n",
+        "\n",
+        "\n",
+        "print(f\"Modelo salvo em {model_path}.\")\n",
+        "print(f\"Detalhes salvos em {model_details_path}\")"
+      ]
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python (venv)",
+      "language": "python",
+      "name": "venv"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.10.12"
+    },
+    "colab": {
+      "provenance": [],
+      "gpuType": "T4"
+    },
+    "accelerator": "GPU"
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
