@@ -1,5 +1,5 @@
 # ErgoPose Risk Classifier  
-*Multi-Class Neural Network for 2D Ergonomic Posture Recognition and Risk Assessment.*
+*Binary Neural Network for 2D Ergonomic Posture Quality Assessment (Good vs Bad).*
 
 ---
 
@@ -73,7 +73,7 @@ Preprocessing steps include:
 - **Feature engineering**: computation of neck, trunk, and shoulder angles.
 - **Quality index creation** — a stability metric based on the variation of body angles.
 - Normalization and standardization of all numerical features.
-- Label encoding for **multi-class posture classification** (e.g., TUP, TLF, TLB, etc.).
+- Label **binarization for Good vs Bad posture quality** classification (good = TUP, bad = all other upper-body labels).
 
 ### 2. **Feature Selection**
 Feature relevance is evaluated through:
@@ -84,12 +84,12 @@ Feature relevance is evaluated through:
 Irrelevant or redundant features are dropped to improve model performance and interpretability.
 
 ### 3. **Learning Task**
-A **multi-class supervised classification** task using an **Artificial Neural Network (ANN)**.  
-The ANN predicts the **upper-body posture class** based on computed features and the stability index.
+A **binary supervised classification task** using an Artificial Neural Network (ANN).  
+The ANN predicts **posture quality (Good vs Bad)** with a single sigmoid output neuron.
 
 ### 4. **Validation Strategy**
 - **5-Fold Cross-Validation** to evaluate model robustness.
-- Metrics: **Accuracy**, **Precision**, **Recall**, **F1-Score**, and **Confusion Matrix** for each class.
+- Metrics: **Accuracy**, **Precision**, **Recall**, **F1-Score**, and **Confusion Matrix** for the two classes (Good vs Bad).
 - Comparison with baseline algorithms (Decision Tree, SVM).
 
 ### 5. **Model Architecture and Hyperparameter Tuning**
@@ -149,9 +149,9 @@ Notebooks include:
 ──────────────────────────────────────────────────────────────  
 **MODEL TRAINING**
 ──────────────────────────────────────────────────────────────  
-• Artificial Neural Network (ANN) for multi-class classification  
+• Artificial Neural Network (ANN) for binary classification  
 • Input: selected features + quality index  
-• Output: posture classes (TUP, TLF, TLB, etc.)  
+• Output: posture quality (0 = Bad, 1 = Good)
 • Framework: TensorFlow / Keras  
 
      
@@ -174,12 +174,12 @@ Notebooks include:
 ──────────────────────────────────────────────────────────────  
 
 ## 📊 Expected Outputs
-- **Trained ANN models** for multi-class posture classification (saved as `.h5` or `.pkl`).
+- **Trained ANN models** for binary posture quality classification (saved as `.h5` or `.pkl`).
 - **Training history logs** for all model variants.
 - **Comparative performance histograms** generated from the history, providing a final overview of model accuracy.
 - Comparative performance metrics (2D vs 3D, with/without feature selection).
 - Visualizations: learning curves, confusion matrices, and feature importance plots.
-- Real-time webcam demo classifying posture classes.
+- Real-time webcam demo classifying posture as Good or Bad.  
 
 ---
 
@@ -199,7 +199,7 @@ Notebooks include:
 ## 🎯 Expected Learning Outcomes
 - Apply **feature engineering and selection** in supervised learning.
 - Understand the trade-offs of **data simplification (Z removal)**.
-- Build and evaluate **multi-class neural networks**.
+- Build and evaluate binary neural networks for posture quality recognition.
 - Develop critical thinking about model generalization and data bias.
 - Integrate ergonomic domain knowledge into ML workflows.
 
