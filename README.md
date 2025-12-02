@@ -49,7 +49,7 @@ ergopose-risk-classifier/
 ├── documents/
 │ └── presentation.pdf
 │ └── diagram-pipeline.json
-│ └── diagram-pipeline.pdf 
+│ └── diagram-pipeline.png 
 │
 ├── requirements.txt # Python dependencies
 ├── README.md
