@@ -46,14 +46,10 @@ ergopose-risk-classifier/
 │ ├── neural_network.pkl # Trained model
 │ └── scaler.pkl # Feature scaler for input normalization
 │
-├── src/
-│ ├── data_preprocessing.py # Data cleaning and transformation functions
-│ ├── feature_extraction.py # Body angle computation from landmarks
-│ ├── model_training.py # ANN definition, training, and evaluation
-│ └── inference.py # Real-time posture classification using webcam
-│
-├── slides/
-│ └── presentation.pptx # Final presentation
+├── documents/
+│ └── presentation.pdf
+│ └── diagram-pipeline.json
+│ └── diagram-pipeline.pdf 
 │
 ├── requirements.txt # Python dependencies
 ├── README.md
