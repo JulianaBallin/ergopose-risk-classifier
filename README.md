@@ -16,13 +16,13 @@ Dataset reference: [Zenodo - Postural Risk Estimation Dataset (2024)](https://ze
 ## 👩‍💻 Team Members
 
 | Name | Registration | GitHub Profile |
-|------|---------------|----------------|
-| **Juliana Ballin Lima** | 2315310011 | [GitHub Profile](https://github.com/JulianaBallin) |
-| **Marcelo Heitor de Almeida Lira** | 2315310043 | [GitHub Profile](https://github.com/Marcelo-Heitor-de-Almeida-Lira) |
-| **Lucas Maciel Gomes** | 2315310014 | [GitHub Profile](https://github.com/lucassmaciel) |
-| **Ryan da Silva Marinho** | 2315310047 | [GitHub Profile](https://github.com/RyanDaSilvaMarinho) |
-| **Pedro César Mendonça Ituassú** | 2315080063 | [GitHub Profile](https://github.com/pedroituassu) |
-| **Caio Jorge Da Cunha Queiroz** | 2315310047 | [GitHub Profile](https://github.com/cjcaio) |
+|------|--------------|----------------|
+| **Juliana Ballin Lima** | 2315310011   | [GitHub Profile](https://github.com/JulianaBallin) |
+| **Marcelo Heitor de Almeida Lira** | 2315310043   | [GitHub Profile](https://github.com/Marcelo-Heitor-de-Almeida-Lira) |
+| **Lucas Maciel Gomes** | 2315310014   | [GitHub Profile](https://github.com/lucassmaciel) |
+| **Ryan da Silva Marinho** | 2315310047   | [GitHub Profile](https://github.com/RyanDaSilvaMarinho) |
+| **Pedro César Mendonça Ituassú** | 2315080063   | [GitHub Profile](https://github.com/pedroituassu) |
+| **Caio Jorge Da Cunha Queiroz** | 2315310028   | [GitHub Profile](https://github.com/cjcaio) |
 
 ---
 
